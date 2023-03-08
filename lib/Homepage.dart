@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -52,9 +54,13 @@ class _HomeState extends State<HomePage> {
                     // ignore: deprecated_member_use
                     ElevatedButton(
                         onPressed: () async {
-                          var name = nameController.text.toString();
-                          var prefs = await SharedPreferences.getInstance();
-                          prefs.setString(KEYNAME, name);
+                          await FirebaseFirestore.instance
+                              .collection("users")
+                              .doc(FirebaseAuth.instance.currentUser!.uid)
+                              .update({
+                            'Notes':
+                                FieldValue.arrayUnion([nameController.text])
+                          });
 
                           Navigator.of(context).pop();
                         },
@@ -70,20 +76,41 @@ class _HomeState extends State<HomePage> {
       ),
       body: Padding(
         padding: EdgeInsets.all(10.0),
-        child: ListView.builder(
-            itemCount: todos.length,
-            itemBuilder: (BuildContext context, int index) {
-              return Dismissible(
-                  key: Key(todos[index]),
-                  child: Card(
-                    margin: EdgeInsets.all(10),
-                    elevation: 0.0,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16)),
-                    child: ListTile(
-                      title: Text(todos[index]),
+        child: StreamBuilder<DocumentSnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection("users")
+                .doc(FirebaseAuth.instance.currentUser!.uid)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                return Center(
+                  child: CircularProgressIndicator(),
+                );
+              }
+              if (snapshot.data!['Notes'].isEmpty) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 100),
+                    child: Text(
+                      'No Notes to Display',
+                      style: TextStyle(color: Colors.white),
                     ),
-                  ));
+                  ),
+                );
+              }
+              return ListView.builder(
+                  itemCount: snapshot.data!['Notes'].length,
+                  itemBuilder: (BuildContext context, int index) {
+                    return Card(
+                      margin: EdgeInsets.all(10),
+                      elevation: 0.0,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                      child: ListTile(
+                        title: Text(snapshot.data!['Notes'][index]),
+                      ),
+                    );
+                  });
             }),
       ),
     );

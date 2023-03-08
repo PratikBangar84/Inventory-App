@@ -101,6 +101,7 @@ class _LoginDemoState extends State<Signup> {
                       "uid": FirebaseAuth.instance.currentUser!.uid,
                       "email": _emailController.text.trim(),
                       "username": _usernameController.text.trim(),
+                      "Notes": []
                     };
                     await FirebaseFirestore.instance
                         .collection("users")
